@@ -26,6 +26,7 @@ async def create(
 @router.put("/{contact_id:int}/{field:str}")
 async def add_data(
         contact_id: int,
-        field: str
+        field: str,
+        db: Session = Depends(get_db)
 ) -> ContactResponse:
     pass
