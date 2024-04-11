@@ -1,6 +1,6 @@
 from typing import Optional, Any
 
-from pydantic import BaseModel, EmailStr, Field, PastDate, computed_field
+from pydantic import BaseModel, EmailStr, Field, PastDate, computed_field, ConfigDict
 
 
 class Contact(BaseModel):
@@ -8,8 +8,9 @@ class Contact(BaseModel):
     last_name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(min_length=6,
-                                 default=None,
-                                 pettern=r"(?\+[0-9]{1,3}\)? ?-?[0-9]{1,3} ?-?[0-9]{3,5} ?-?[0-9]{4}( ?-?[0-9]{3})")
+                                 max_length=15,
+                                 pattern=r'[0-9]*',
+                                 default=None)
     birthday: Optional[PastDate] = None
     extra: Optional[Any] = None
 
@@ -18,3 +19,9 @@ class Contact(BaseModel):
     def full_name(self) -> str:
         lname = ' ' + self.last_name if self.last_name else ''
         return self.first_name + lname
+
+
+class ContactResponse(Contact):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
