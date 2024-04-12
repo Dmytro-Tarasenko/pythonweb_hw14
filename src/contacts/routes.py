@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from db import get_db
+from db import get_db, ContactORM
 from contacts.models import Contact, ContactResponse
 
 router = APIRouter(prefix='/contacts',
@@ -12,7 +12,15 @@ router = APIRouter(prefix='/contacts',
 async def read(
         db: Session = Depends(get_db)
 ) -> list[ContactResponse]:
-    pass
+    return [ContactResponse.from_orm(_) for _ in db.query(ContactORM).all()]
+
+
+@router.get("/{contact_id:int}")
+async def read_id(contact_id: int,
+                  db: Session = Depends(get_db)
+                  ) -> ContactResponse:
+    res = db.get(ContactORM, contact_id)
+    return ContactResponse.from_orm(res)
 
 
 @router.post("/")

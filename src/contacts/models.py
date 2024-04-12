@@ -25,3 +25,8 @@ class ContactResponse(Contact):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+
+
+if __name__ == "__main__":
+    print(Contact.model_json_schema())
+    print(ContactResponse.model_json_schema())
