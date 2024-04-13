@@ -26,6 +26,7 @@ class ContactORM(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str] = mapped_column(String(20))
     last_name:  Mapped[Optional[str]] = mapped_column(String(20))
+    phone: Mapped[Optional[str]] = mapped_column(String(15))
     email: Mapped[Optional[str]] = mapped_column(String(80),
                                                  unique=True)
     birthday: Mapped[Optional[date]] = mapped_column(Date())
