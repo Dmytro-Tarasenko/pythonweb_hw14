@@ -1,7 +1,8 @@
 import re
-from typing import Any
+from typing import Any, TypeAlias, Literal, List
 
 from fastapi import APIRouter, Depends, status
+from sqlalchemy import column
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
@@ -62,3 +63,46 @@ async def add_data(
         db: Session = Depends(get_db)
 ) -> ContactResponse:
     pass
+
+
+def get_field_names(model: "BaseModel") -> List[str]:
+    fields = list(model.model_fields.keys())
+    fields.extend(list(model.model_computed_fields.keys()))
+    return fields
+
+ContactFields: TypeAlias = Literal[*get_field_names(Contact)]
+
+@router.get("/find", response_model=List[ContactResponse])
+async def find_contact(
+        value: str,
+        db: Session = Depends(get_db),
+        field: ContactFields = "full_name"
+) -> Any:
+    if field != "full_name":
+        if len(value) == 0:
+            res = db.query(ContactORM)\
+                .filter(column(field).is_(None)).all()
+        else:
+            search_condition = f"%{value}%"
+            res = db.query(ContactORM)\
+                .filter(column(field)\
+                        .like(search_condition)).all()
+
+        if len(res) == 0:
+            return JSONResponse(status_code=404,
+                                content={
+                                    "details": [
+                                        {
+                                            "msg": f"There is no result for {field}={value} "
+                                        }
+                                    ]
+                                })
+        return [ContactResponse.from_orm(_) for _ in res]
+    else:
+        try:
+            first_name, last_name = value.split(" ", maxsplit=1)
+        except:
+            first_name = value
+            last_name = None
+        return JSONResponse(status_code=200,
+                            content=f"Fullname search  for {first_name} {last_name}")
