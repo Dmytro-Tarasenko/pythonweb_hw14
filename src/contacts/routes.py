@@ -16,7 +16,6 @@ from contacts.models import Contact, ContactResponse
 
 router = APIRouter(prefix='/contacts',
                    tags=['contacts'])
-ContactFields: TypeAlias = Literal[*(str(_) for _ in Contact.model_fields)]
 
 
 @router.get("/")
@@ -76,6 +75,7 @@ async def create(
 
 
 def get_field_names(model: "BaseModel") -> List[str]:
+    """Return a list of field names for the model."""
     fields = list(model.model_fields.keys())
     fields.extend(list(model.model_computed_fields.keys()))
     return fields
@@ -121,9 +121,10 @@ async def find_contact(
 
 
 @router.get("/bd_mates", response_model=List[ContactResponse])
-async def get_birthday_mates(
+async def get_birthday_mates_default(
         db: Session = Depends(get_db)
 ) -> Any:
+    """Return contacts with birthday in the next 7 days."""
     return await get_birthday_mates(
         days=7,
         db=db
@@ -135,6 +136,10 @@ async def get_birthday_mates(
         days: int,
         db: Session = Depends(get_db)
 ) -> Any:
+    """Return contacts with birthday in the next {days} days.
+        :param days: int, number of days to search for birthday mates
+        :return: list of ContactResponse objects
+    """
     res = []
     request_md = []
     for i in range(days):
@@ -156,7 +161,6 @@ async def get_birthday_mates(
             }
         )
     return [ContactResponse.from_orm(_) for _ in res]
-
 
   
 @router.put("/{contact_id:int}/add/{field:str}/{value}",
