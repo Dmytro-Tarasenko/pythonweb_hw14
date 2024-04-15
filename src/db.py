@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional, Any
 
-from sqlalchemy import create_engine, UniqueConstraint, String, Date, BLOB
+from sqlalchemy import create_engine, UniqueConstraint, String, Date, PickleType
 
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, mapped_column, Mapped
 
@@ -30,7 +30,7 @@ class ContactORM(Base):
     email: Mapped[Optional[str]] = mapped_column(String(80),
                                                  unique=True)
     birthday: Mapped[Optional[date]] = mapped_column(Date())
-    extra: Mapped[Optional[Any]] = mapped_column(BLOB())
+    extra: Mapped[Optional[Any]] = mapped_column(PickleType())
 
 
 async def get_db():

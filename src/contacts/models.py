@@ -28,5 +28,4 @@ class ContactResponse(Contact):
 
 
 if __name__ == "__main__":
-    print(Contact.model_json_schema())
-    print(ContactResponse.model_json_schema())
+    print([_ for _ in Contact.model_fields])
