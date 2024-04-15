@@ -1,9 +1,12 @@
 import re
+from datetime import date, timedelta
+from typing import Any, TypeAlias, Literal, List
 from pickle import dumps
 from json import dumps as jdumps
-from typing import Any, Literal, TypeAlias
+
 
 from fastapi import APIRouter, Depends, status
+from sqlalchemy import column
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
@@ -72,6 +75,90 @@ async def create(
     return ContactResponse.from_orm(res)
 
 
+def get_field_names(model: "BaseModel") -> List[str]:
+    fields = list(model.model_fields.keys())
+    fields.extend(list(model.model_computed_fields.keys()))
+    return fields
+
+ContactFields: TypeAlias = Literal[*get_field_names(Contact)]
+
+
+@router.get("/find", response_model=List[ContactResponse])
+async def find_contact(
+        value: str,
+        db: Session = Depends(get_db),
+        field: ContactFields = "full_name"
+) -> Any:
+    if field != "full_name":
+        if len(value) == 0:
+            res = db.query(ContactORM)\
+                .filter(column(field).is_(None)).all()
+        else:
+            search_condition = f"%{value}%"
+            print(search_condition)
+            res = db.query(ContactORM)\
+                .filter(column(field)\
+                        .like(search_condition)).all()
+
+        if len(res) == 0:
+            return JSONResponse(status_code=404,
+                                content={
+                                    "details": [
+                                        {
+                                            "msg": f"There is no result for {field}={value} "
+                                        }
+                                    ]
+                                })
+        return [ContactResponse.from_orm(_) for _ in res]
+    else:
+        try:
+            first_name, last_name = value.split(" ", maxsplit=1)
+        except:
+            first_name = value
+            last_name = None
+        return JSONResponse(status_code=200,
+                            content=f"Fullname search  for {first_name} {last_name}")
+
+
+@router.get("/bd_mates", response_model=List[ContactResponse])
+async def get_birthday_mates(
+        db: Session = Depends(get_db)
+) -> Any:
+    return await get_birthday_mates(
+        days=7,
+        db=db
+    )
+
+
+@router.get("/bd_mates/{days:int}", response_model=List[ContactResponse])
+async def get_birthday_mates(
+        days: int,
+        db: Session = Depends(get_db)
+) -> Any:
+    res = []
+    request_md = []
+    for i in range(days):
+        month_day = (date.today()+timedelta(days=i)).strftime("%m-%d")
+        request_md.append(month_day)
+    for md in request_md:
+        part = db.query(ContactORM)\
+            .filter(ContactORM.birthday.like(f"%{md}")).all()
+        res.extend(part)
+    if len(res) == 0:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "details": [
+                    {
+                        "msg": f"There is no Birthday mates in {days} day(s)"
+                    }
+                ]
+            }
+        )
+    return [ContactResponse.from_orm(_) for _ in res]
+
+
+  
 @router.put("/{contact_id:int}/add/{field:str}/{value}",
             response_model=ContactResponse)
 async def add_data(
