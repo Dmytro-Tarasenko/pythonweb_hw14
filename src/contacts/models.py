@@ -1,6 +1,11 @@
 from typing import Optional, Any
 
-from pydantic import BaseModel, EmailStr, Field, PastDate, computed_field, ConfigDict
+from pydantic import (BaseModel,
+                      EmailStr,
+                      Field,
+                      PastDate,
+                      computed_field,
+                      ConfigDict)
 
 
 class Contact(BaseModel):

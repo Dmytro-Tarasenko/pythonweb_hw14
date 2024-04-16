@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional, Any
 
-from sqlalchemy import create_engine, UniqueConstraint, String, Date, PickleType, Text
+from sqlalchemy import create_engine, String, Date, Text
 
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, mapped_column, Mapped
 
