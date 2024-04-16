@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 582f54c9f6d3
+Revision ID: db1df57014ec
 Revises: 
-Create Date: 2024-04-13 12:10:22.294320
+Create Date: 2024-04-16 10:48:26.951259
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '582f54c9f6d3'
+revision: str = 'db1df57014ec'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,12 +24,14 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('first_name', sa.String(length=20), nullable=False),
     sa.Column('last_name', sa.String(length=20), nullable=True),
+    sa.Column('full_name', sa.String(), nullable=False),
+    sa.Column('phone', sa.String(length=15), nullable=True),
     sa.Column('email', sa.String(length=80), nullable=True),
     sa.Column('birthday', sa.Date(), nullable=True),
-    sa.Column('extra', sa.BLOB(), nullable=True),
+    sa.Column('extra', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
-    sa.UniqueConstraint('first_name', 'last_name', name='full_name_uix')
+    sa.UniqueConstraint('full_name')
     )
     # ### end Alembic commands ###
 

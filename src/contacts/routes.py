@@ -1,21 +1,29 @@
 import re
 from datetime import date, timedelta
 from typing import Any, TypeAlias, Literal, List
-from pickle import dumps
-from json import dumps as jdumps
-
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import column
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
+from starlette.responses import Response
 
 from db import get_db, ContactORM
 from contacts.models import Contact, ContactResponse
 
 router = APIRouter(prefix='/contacts',
                    tags=['contacts'])
+
+
+def get_field_names(model: "BaseModel") -> List[str]:
+    """Return a list of field names for the model."""
+    fields = list(model.model_fields.keys())
+    fields.extend(list(model.model_computed_fields.keys()))
+    return fields
+
+
+ContactFields: TypeAlias = Literal[*get_field_names(Contact)]
 
 
 @router.get("/")
@@ -61,7 +69,7 @@ async def create(
                     ]})
     except Exception:
         db.rollback()
-        return JSONResponse(status_code=status.HTTP_409_CONFLICT,
+        return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                             content={
                                 "details": [
                                     {"type": "ValueError"},
@@ -72,15 +80,6 @@ async def create(
     res = db.query(ContactORM).filter_by(first_name=contact.first_name,
                                          last_name=contact.last_name).first()
     return ContactResponse.from_orm(res)
-
-
-def get_field_names(model: "BaseModel") -> List[str]:
-    """Return a list of field names for the model."""
-    fields = list(model.model_fields.keys())
-    fields.extend(list(model.model_computed_fields.keys()))
-    return fields
-
-ContactFields: TypeAlias = Literal[*get_field_names(Contact)]
 
 
 @router.get("/find", response_model=List[ContactResponse])
@@ -95,7 +94,6 @@ async def find_contact(
                 .filter(column(field).is_(None)).all()
         else:
             search_condition = f"%{value}%"
-            print(search_condition)
             res = db.query(ContactORM)\
                 .filter(column(field)\
                         .like(search_condition)).all()
@@ -168,7 +166,7 @@ async def get_birthday_mates(
 async def add_data(
         contact_id: int,
         field: ContactFields,
-        value: Any,
+        value: str,
         db: Session = Depends(get_db)
 ) -> Any:
     """Add data to the contact."""
@@ -187,7 +185,7 @@ async def add_data(
 
     if contact.__dict__.get(field) is not None:
         return JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
                 "details": [
                     {"type": "ValueError"},
@@ -196,16 +194,12 @@ async def add_data(
                              " to update it.")}
                 ]
             })
-    if field == 'extra':
-        value = dumps(value)
-
     db.query(ContactORM).filter_by(id=contact_id).update({field: value})
     db.commit()
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content={
                 "details": [
-                    {"type": "ValueError"},
                     {'msg': f"Data {value} added successfully to {field}"
                             f" for contact with id {contact_id}"}
                 ]
@@ -213,10 +207,68 @@ async def add_data(
     )
 
 
-@router.delete('/{contact_id:int}')
-async def delete(contact_id: int,
-                 db: Session = Depends(get_db)
-                 ) -> JSONResponse:
+@router.patch("/{contact_id:int}/edit/{field:str}/{value:str}",
+            response_model=ContactResponse)
+async def edit_data(
+        contact_id: int,
+        field: ContactFields,
+        value: str,
+        db: Session = Depends(get_db)
+) -> Any:
+    """Edit data of the contact."""
+    contact = db.get(ContactORM, contact_id)
+
+    if contact is None:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "details": [
+                    {"type": "ValueError"},
+                    {"msg": f"Contact with id {contact_id} not found"}
+                ]
+            }
+        )
+
+    if contact.__dict__.get(field) is None:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "details": [
+                    {"type": "ValueError"},
+                    {'msg': (f"Field {field} is not set."
+                             " Use contacts/:id/add/:field/:value"
+                             " to add it.")}
+                ]
+            })
+    if field == ("full_name"):
+        try:
+            first, last = value.split(" ", maxsplit=1)
+        except:
+            first = value
+            last = None
+        db.query(ContactORM).filter_by(id=contact_id).update({"first_name": first,
+                                                              "last_name": last})
+        db.commit()
+    else:
+        db.query(ContactORM).filter_by(id=contact_id).update({field: value})
+        db.commit()
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content={
+                "details": [
+                    {'msg': f"{field} changed successfully with data {value}"
+                            f" for contact with id {contact_id}"}
+                ]
+            }
+    )
+
+
+@router.delete('/delete/{contact_id:int}',
+               responses={204: {"model": None}})
+async def delete(
+        contact_id: int,
+        db: Session = Depends(get_db)
+) -> Any:
     """Delete a contact by id."""
     contact = db.get(ContactORM, contact_id)
     if contact is None:
@@ -231,5 +283,39 @@ async def delete(contact_id: int,
         )
     db.delete(contact)
     db.commit()
-    return JSONResponse(status_code=status.HTTP_204_NO_CONTENT,
-                        content={})
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete('/{contact_id:int}/delete/{field:str}',
+               responses={204: {"model": None}})
+async def delete_data(
+        contact_id: int,
+        field: ContactFields,
+        db: Session = Depends(get_db)
+) -> Any:
+    """Delete field for contact with id."""
+    contact = db.get(ContactORM, contact_id)
+    if contact is None:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "details": [
+                    {"type": "ValueError"},
+                    {"msg": f"Contact with id {contact_id} not found"}
+                ]
+            }
+        )
+    if field == "full_name" or field == "first_name":
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "details": [
+                    {"type": "ValueError"},
+                    {"msg": "Unable to delete required field (first_name or last_name)."
+                     "Use /contacts/delete/:id instead."}
+                ]
+            }
+        )
+    db.query(ContactORM).filter_by(id=contact_id).update({field: None})
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
