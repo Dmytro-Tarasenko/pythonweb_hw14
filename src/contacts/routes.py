@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
-from db import get_db, ContactORM
+from db import get_db
+from contacts.orms import ContactORM
 from contacts.models import Contact, ContactResponse
 
 router = APIRouter(prefix='/contacts',
