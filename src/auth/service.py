@@ -16,15 +16,18 @@ from auth.orms import User
 from db import get_db
 
 load_dotenv()
-SECRET = getenv("SECRET")
+SECRET_256 = getenv("SECRET_256")
+SECRET_512 = getenv("SECRET_512")
 
 Scope: TypeAlias = Literal['access_token', 'refresh_token']
 
 
 class Authentication:
     HASH_CONTEXT = context.CryptContext(schemes=['bcrypt'])
-    ALGORITHM = "HS256"
-    SECRET_KEY = SECRET
+    ACCESS_ALGORITHM = "HS256"
+    REFRESH_ALGORITHM = "HS512"
+    SECRET_256 = SECRET_256
+    SECRET_512 = SECRET_512
     oauth2_schema = security.OAuth2PasswordBearer(tokenUrl="/auth/login")
 
     def verify_password(
@@ -50,16 +53,23 @@ class Authentication:
         current_time = datetime.now(timezone.utc)
         expiration_time = current_time + time_to_live
 
+        key = self.SECRET_256\
+            if scope == "access_token" \
+            else self.SECRET_512
+
+        algorithm = self.ACCESS_ALGORITHM \
+            if scope == "access_token" \
+            else self.REFRESH_ALGORITHM
+
         payload = {
             "sub": email,
-            "iat": current_time,
             "exp": expiration_time,
             "scope": scope
         }
 
         jwt_token = jwt.encode(claims=payload,
-                               key=self.SECRET_KEY,
-                               algorithm=self.ALGORITHM)
+                               key=key,
+                               algorithm=algorithm)
 
         return jwt_token
 
@@ -84,12 +94,22 @@ class Authentication:
     def get_user(
             self,
             token: Annotated[str, Depends(oauth2_schema)],
-            db: Annotated[Session, Depends(get_db)]
+            db: Annotated[Session, Depends(get_db)],
+            scope: Scope = "access_token"
     ) -> Any:
+
+        key = self.SECRET_256 \
+            if scope == "access_token" \
+            else self.SECRET_512
+
+        algorithm = self.ACCESS_ALGORITHM \
+            if scope == "access_token" \
+            else self.REFRESH_ALGORITHM
+
         try:
             payload = jwt.decode(token=token,
-                                 key=self.SECRET_KEY,
-                                 algorithms=[self.ALGORITHM])
+                                 key=key,
+                                 algorithms=[algorithm])
         except jose.JWTError as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -102,16 +122,26 @@ class Authentication:
                 detail="Invalid token scope"
             )
 
-        if payload.get("scope") != "access_token":
+        if all([payload.get("scope") == "access_token",
+                datetime.fromtimestamp(int(payload.get("exp")))
+                <= datetime.now(timezone.utc)]):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token scope"
+                detail="Token expired. Use /auth/refresh with refresh token"
+            )
+
+        if all([payload.get("scope") == "refresh_token",
+                datetime.fromtimestamp(int(payload.get("exp")))
+                <= datetime.now(timezone.utc)]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token expired. Use /auth/login to get new tokens"
             )
 
         email = payload.get("sub")
         if email is None:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid token scope"
             )
 
@@ -125,8 +155,4 @@ class Authentication:
                 detail="User not found."
             )
 
-        if user.refresh_token is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid user info"
-            )
+        return user

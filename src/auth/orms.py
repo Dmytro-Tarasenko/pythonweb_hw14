@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -13,7 +13,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True)
     hashed_pwd: Mapped[str] = mapped_column()
-    refresh_token: Mapped[str] = mapped_column()
+    # refresh_token: Mapped[str] = mapped_column()
     full_name: Mapped[Optional[str]] = mapped_column(default=None,
-                                                     unique=True)
-    contacts: Mapped[list[ContactORM]] = relationship(back_populates="owner")
+                                                     unique=True,
+                                                     nullable=True)
+    contacts: Mapped[Optional[List[ContactORM]]] = relationship()

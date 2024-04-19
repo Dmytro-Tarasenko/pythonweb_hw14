@@ -2,15 +2,30 @@ from random import randint
 
 import sqlalchemy
 from faker import Faker
-from faker.providers import date_time
 from db import DBSession
+
+from auth.orms import User
+from auth.service import Authentication
 from contacts.orms import ContactORM
 
 fake = Faker('uk_UA')
 
+auth = Authentication()
+
+for _ in range(5):
+    email = fake.email()
+    password = auth.hash_password(plain_password="password")
+    user = User(email=email,
+                hashed_pwd=password)
+    with DBSession() as session:
+        session.add(user)
+        session.commit()
+
+
 for _ in range(111):
     first_name = fake.first_name()
     last_name = fake.last_name()
+    owner = randint(1, 5)
     if randint(0, 9) > 3:
         email = fake.email()
     else:
@@ -42,7 +57,8 @@ for _ in range(111):
                          phone=phone,
                          email=email,
                          birthday=birthday,
-                         extra=extra)
+                         extra=extra,
+                         owner=owner)
 
     with DBSession() as session:
         try:

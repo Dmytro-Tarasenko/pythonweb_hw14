@@ -43,4 +43,5 @@ class ContactORM(Base):
                                                  unique=True)
     birthday: Mapped[Optional[date]] = mapped_column(Date())
     extra: Mapped[Optional[Any]] = mapped_column(Text())
-    owner: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    owner: Mapped[int] = mapped_column(ForeignKey("users.id"),
+                                       default=1)
