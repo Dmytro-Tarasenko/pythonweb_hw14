@@ -1,12 +1,11 @@
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, TypeAlias, Literal, Annotated
+from typing import Any, TypeAlias, Literal, Annotated
 from os import getenv
 
 from dotenv import load_dotenv
 import jose
 from jose import jwt
 from passlib import context
-import fastapi
 from fastapi import security, Depends, HTTPException
 from sqlalchemy.orm import Session
 from starlette import status
@@ -15,7 +14,14 @@ from auth.orms import User
 from db import get_db
 
 load_dotenv()
+# SECRET_256 = secrets.token_urlsafe(32)
+# 3a8jvwva4E4PQaxRaYSpPlgjcVWQ3HHhLH0gUM-PN38
+# ^^USED IN THIS PROJECT^^
 SECRET_256 = getenv("SECRET_256")
+
+# SECRET_512 = secrets.token_urlsafe(64)
+# ZGnDOxWiACx8hp-UZfx9FUchXFTDb8ti-bP4Nhi9gHGmjhynjoVSZwUTJLWiG2uizkin5gOhbdUfWSmux6RWFQ
+# ^^USED IN THIS PROJECT^^
 SECRET_512 = getenv("SECRET_512")
 
 Scope: TypeAlias = Literal['access_token', 'refresh_token']
@@ -155,3 +161,24 @@ class Authentication:
             )
 
         return user
+
+    def get_access_user(
+            self,
+            token: Annotated[str, Depends(oauth2_schema)],
+            db: Annotated[Session, Depends(get_db)]
+    ) -> Any:
+        return self.get_user(
+            token=token,
+            db=db
+        )
+
+    def get_refresh_user(
+            self,
+            token: Annotated[str, Depends(oauth2_schema)],
+            db: Annotated[Session, Depends(get_db)]
+    ) -> Any:
+        return self.get_user(
+            token=token,
+            db=db,
+            scope="refresh_token"
+        )
