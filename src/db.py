@@ -5,8 +5,8 @@ from sqlalchemy import create_engine, String, Date, Text
 
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, mapped_column, Mapped
 
-engine = create_engine("sqlite:///hw12_api.sqlite")
-# engine = create_engine('postgresql://guest:guest@localhost:5432/hw12_api')
+# engine = create_engine("sqlite:///hw12_api.sqlite")
+engine = create_engine('postgresql://guest:guest@localhost:5432/hw12_api')
 DBSession = sessionmaker(autocommit=False,
                          autoflush=False,
                          bind=engine)
