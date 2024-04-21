@@ -1,6 +1,6 @@
 import re
 from datetime import date, timedelta
-from typing import Any, TypeAlias, Literal, List
+from typing import Any, TypeAlias, Literal, List, Annotated
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import column
@@ -12,10 +12,13 @@ from starlette.responses import Response
 from db import get_db
 from contacts.orms import ContactORM
 from contacts.models import Contact, ContactResponse
+from auth.orms import User
+from auth.service import Authentication
 
 router = APIRouter(prefix='/contacts',
                    tags=['contacts'])
 
+auth_service = Authentication()
 
 def get_field_names(model: "BaseModel") -> List[str]:
     """Return a list of field names for the model."""
@@ -29,18 +32,23 @@ ContactFields: TypeAlias = Literal[*get_field_names(Contact)]
 
 @router.get("/")
 async def read(
+        user: Annotated[User, Depends(auth_service.get_access_user)],
         db: Session = Depends(get_db)
 ) -> list[ContactResponse]:
     """Return all contacts from the database."""
-    return [ContactResponse.from_orm(_) for _ in db.query(ContactORM).all()]
+    return [ContactResponse.from_orm(_) for _ in db.query(ContactORM)\
+               .filter(ContactORM.owner == user.id).all()]
 
 
 @router.get("/{contact_id:int}", response_model=ContactResponse)
 async def read_id(contact_id: int,
+                  user: Annotated[User, Depends(auth_service.get_access_user)],
                   db: Session = Depends(get_db)
                   ) -> Any:
     """Return a contact by id."""
-    res = db.get(ContactORM, contact_id)
+    res = db.query(ContactORM.id == contact_id,
+                   ContactORM.owner == user.id).first()
+
     if res is None:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
                             content=f"Contact with id {contact_id} not found")
@@ -50,10 +58,11 @@ async def read_id(contact_id: int,
 @router.post("/", response_model=ContactResponse)
 async def create(
         contact: Contact,
+        user: Annotated[User, Depends(auth_service.get_access_user)],
         db: Session = Depends(get_db)
 ) -> Any:
     """Create a new contact."""
-    db.add(ContactORM(**contact.model_dump(exclude={'full_name'})))
+    db.add(ContactORM(**contact.model_dump(exclude={'full_name'}), owner=user.id))
     try:
         db.commit()
     except IntegrityError as e:
@@ -86,18 +95,21 @@ async def create(
 @router.get("/find", response_model=List[ContactResponse])
 async def find_contact(
         value: str,
-        db: Session = Depends(get_db),
+        db: Annotated[Session, Depends(get_db)],
+        user: Annotated[User, Depends(auth_service.get_access_user)],
         field: ContactFields = "full_name"
 ) -> Any:
+    print(field, value)
     if field != "full_name":
         if len(value) == 0:
             res = db.query(ContactORM)\
-                .filter(column(field).is_(None)).all()
+                .filter(column(field).is_(None),
+                        ContactORM.owner == user.id).all()
         else:
             search_condition = f"%{value}%"
             res = db.query(ContactORM)\
-                .filter(column(field)\
-                        .like(search_condition)).all()
+                .filter(column(field).like(search_condition),
+                        ContactORM.owner == user.id).all()
 
         if len(res) == 0:
             return JSONResponse(status_code=404,
@@ -109,14 +121,14 @@ async def find_contact(
                                     ]
                                 })
         return [ContactResponse.from_orm(_) for _ in res]
-    else:
-        try:
-            first_name, last_name = value.split(" ", maxsplit=1)
-        except:
-            first_name = value
-            last_name = None
-        return JSONResponse(status_code=200,
-                            content=f"Fullname search  for {first_name} {last_name}")
+
+    try:
+        first_name, last_name = value.split(" ", maxsplit=1)
+    except:
+        first_name = value
+        last_name = None
+    return JSONResponse(status_code=200,
+                        content=f"Fullname search  for {first_name} {last_name}")
 
 
 @router.get("/bd_mates", response_model=List[ContactResponse])
@@ -133,7 +145,8 @@ async def get_birthday_mates_default(
 @router.get("/bd_mates/{days:int}", response_model=List[ContactResponse])
 async def get_birthday_mates(
         days: int,
-        db: Session = Depends(get_db)
+        db: Annotated[Session, Depends(get_db)],
+        user: Annotated[User, Depends(auth_service.get_access_user)]
 ) -> Any:
     """Return contacts with birthday in the next {days} days.
         :param days: int, number of days to search for birthday mates
@@ -146,7 +159,8 @@ async def get_birthday_mates(
         request_md.append(month_day)
     for md in request_md:
         part = db.query(ContactORM)\
-            .filter(ContactORM.birthday.like(f"%{md}")).all()
+            .filter(ContactORM.birthday.like(f"%{md}"),
+                    ContactORM.owner == user.id).all()
         res.extend(part)
     if len(res) == 0:
         return JSONResponse(
@@ -168,10 +182,12 @@ async def add_data(
         contact_id: int,
         field: ContactFields,
         value: str,
-        db: Session = Depends(get_db)
+        db: Annotated[Session, Depends(get_db)],
+        user: Annotated[User, Depends(auth_service.get_access_user)]
 ) -> Any:
     """Add data to the contact."""
-    contact = db.get(ContactORM, contact_id)
+    contact = db.query(ContactORM.id == contact_id,
+                       ContactORM.owner == user.id).first()
 
     if contact is None:
         return JSONResponse(
@@ -214,10 +230,12 @@ async def edit_data(
         contact_id: int,
         field: ContactFields,
         value: str,
-        db: Session = Depends(get_db)
+        db: Annotated[Session, Depends(get_db)],
+        user: Annotated[User, Depends(auth_service.get_access_user)]
 ) -> Any:
     """Edit data of the contact."""
-    contact = db.get(ContactORM, contact_id)
+    contact = db.query(ContactORM.id == contact_id,
+                       ContactORM.owner == user.id).first()
 
     if contact is None:
         return JSONResponse(
@@ -268,10 +286,12 @@ async def edit_data(
                responses={204: {"model": None}})
 async def delete(
         contact_id: int,
-        db: Session = Depends(get_db)
+        db: Annotated[Session, Depends(get_db)],
+        user: Annotated[User, Depends(auth_service.get_access_user)]
 ) -> Any:
     """Delete a contact by id."""
-    contact = db.get(ContactORM, contact_id)
+    contact = db.query(ContactORM.id == contact_id,
+                       ContactORM.owner == user.id).first()
     if contact is None:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -292,10 +312,12 @@ async def delete(
 async def delete_data(
         contact_id: int,
         field: ContactFields,
-        db: Session = Depends(get_db)
+        db: Annotated[Session, Depends(get_db)],
+        user: Annotated[User, Depends(auth_service.get_access_user)]
 ) -> Any:
     """Delete field for contact with id."""
-    contact = db.get(ContactORM, contact_id)
+    contact = db.query(ContactORM.id == contact_id,
+                       ContactORM.owner == user.id).first()
     if contact is None:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
