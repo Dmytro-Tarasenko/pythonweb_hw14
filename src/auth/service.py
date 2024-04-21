@@ -114,7 +114,8 @@ class Authentication:
         try:
             payload = jwt.decode(token=token,
                                  key=key,
-                                 algorithms=[algorithm])
+                                 algorithms=[algorithm],
+                                 options={"verify_exp": False})
         except jose.JWTError as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
