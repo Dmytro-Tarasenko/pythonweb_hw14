@@ -127,20 +127,18 @@ class Authentication:
                 detail="Invalid token scope"
             )
 
+        if payload.get("sub") is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+
         if all([payload.get("scope") == "access_token",
-                datetime.fromtimestamp(int(payload.get("exp")))
-                <= datetime.now(timezone.utc)]):
+                int(payload.get("exp"))
+                <= int(datetime.timestamp(datetime.now(timezone.utc)))]):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token expired. Use /auth/refresh with refresh token"
-            )
-
-        if all([payload.get("scope") == "refresh_token",
-                datetime.fromtimestamp(int(payload.get("exp")))
-                <= datetime.now(timezone.utc)]):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token expired. Use /auth/login to get new tokens"
             )
 
         email = payload.get("sub")
@@ -160,7 +158,23 @@ class Authentication:
                 detail="User not found."
             )
 
-        return user
+        if all([payload.get("scope") == "refresh_token",
+                int(payload.get("exp"))
+                <= int(datetime.timestamp(datetime.now(timezone.utc)))]):
+            user.loggedin = False
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token expired. Use /auth/login to get new tokens"
+            )
+
+        if User.loggedin:
+            return user
+
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not logged in. Use /auth/login"
+        )
 
     def get_access_user(
             self,
