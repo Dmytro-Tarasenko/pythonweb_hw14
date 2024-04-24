@@ -27,4 +27,3 @@ class AppSettings(BaseModel):
 
 __env_settings = EnvSettings()
 settings = AppSettings(**__env_settings.model_dump(warnings=False))
-print(settings)
