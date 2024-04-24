@@ -1,12 +1,11 @@
-from datetime import date
-from typing import Optional, Any
+from sqlalchemy import create_engine
 
-from sqlalchemy import create_engine, String, Date, Text
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
-from sqlalchemy.orm import sessionmaker, DeclarativeBase, mapped_column, Mapped
+from settings import settings
 
 # engine = create_engine("sqlite:///hw12_api.sqlite")
-engine = create_engine('postgresql://guest:guest@localhost:5432/hw12_api')
+engine = create_engine(settings.sqlalchemy_url)
 DBSession = sessionmaker(autocommit=False,
                          autoflush=False,
                          bind=engine)

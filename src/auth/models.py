@@ -6,6 +6,7 @@ from pydantic import BaseModel, EmailStr, Field, ConfigDict
 class UserModel(BaseModel):
     email: EmailStr
     full_name: Optional[str] = Field(default=None)
+    avatar_url: Optional[str] = Field(default=None)
 
 
 class UserRequest(UserModel):

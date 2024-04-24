@@ -1,38 +1,26 @@
 from datetime import datetime, timezone, timedelta
 from typing import Any, TypeAlias, Literal, Annotated
-from os import getenv
 
-from dotenv import load_dotenv
 import jose
 from jose import jwt
-from passlib import context
+import bcrypt
 from fastapi import security, Depends, HTTPException
 from sqlalchemy.orm import Session
 from starlette import status
 
 from auth.orms import User
 from db import get_db
-
-load_dotenv()
-# SECRET_256 = secrets.token_urlsafe(32)
-# 3a8jvwva4E4PQaxRaYSpPlgjcVWQ3HHhLH0gUM-PN38
-# ^^USED IN THIS PROJECT^^
-SECRET_256 = getenv("SECRET_256")
-
-# SECRET_512 = secrets.token_urlsafe(64)
-# ZGnDOxWiACx8hp-UZfx9FUchXFTDb8ti-bP4Nhi9gHGmjhynjoVSZwUTJLWiG2uizkin5gOhbdUfWSmux6RWFQ
-# ^^USED IN THIS PROJECT^^
-SECRET_512 = getenv("SECRET_512")
+from settings import settings
 
 Scope: TypeAlias = Literal['access_token', 'refresh_token']
 
 
 class Authentication:
-    HASH_CONTEXT = context.CryptContext(schemes=['bcrypt'])
-    ACCESS_ALGORITHM = "HS256"
-    REFRESH_ALGORITHM = "HS512"
-    SECRET_256 = SECRET_256
-    SECRET_512 = SECRET_512
+    HASH_SERVICE = bcrypt
+    ACCESS_ALGORITHM = settings.access_algorithm
+    REFRESH_ALGORITHM = settings.refresh_algorithm
+    SECRET_256 = settings.secret_256
+    SECRET_512 = settings.secret_512
     oauth2_schema = security.OAuth2PasswordBearer(tokenUrl="/auth/login")
 
     def verify_password(
@@ -40,14 +28,19 @@ class Authentication:
             plain_password: str,
             hashed_password: str
     ) -> bool:
-        return self.HASH_CONTEXT.verify(secret=plain_password,
-                                        hash=hashed_password)
+        return self.HASH_SERVICE.checkpw(
+            password=plain_password.encode(),
+            hashed_password=hashed_password.encode()
+        )
 
     def hash_password(
             self,
             plain_password: str
     ) -> str:
-        return self.HASH_CONTEXT.hash(plain_password)
+        return self.HASH_SERVICE.hashpw(
+            password=plain_password.encode(),
+            salt=self.HASH_SERVICE.gensalt()
+        ).decode()
 
     def create_token(
             self,

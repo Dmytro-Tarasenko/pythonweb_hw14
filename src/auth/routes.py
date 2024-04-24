@@ -16,6 +16,7 @@ router = APIRouter(prefix="/auth",
 
 auth_service = Authentication()
 
+
 @router.post("/register",
              response_model=UserDB,
              responses={409: {"description": "User already exists"},

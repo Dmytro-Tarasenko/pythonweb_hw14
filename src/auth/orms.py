@@ -14,7 +14,8 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True)
     hashed_pwd: Mapped[str] = mapped_column()
     loggedin: Mapped[Optional[bool]] = mapped_column(default=False)
-    # refresh_token: Mapped[str] = mapped_column()
+    email_confirmed: Mapped[Optional[bool]] = mapped_column(default=False)
+    avatar_url: Mapped[Optional[str]] = mapped_column(default=None)
     full_name: Mapped[Optional[str]] = mapped_column(default=None,
                                                      unique=True,
                                                      nullable=True)

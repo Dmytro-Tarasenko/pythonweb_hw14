@@ -14,9 +14,10 @@ uvicorn = "^0.29.0"
 python-dotenv = "^1.0.1"
 alembic = "^1.13.1"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
-passlib = "^1.7.4"
 bcrypt = "^4.1.2"
 psycopg2-binary = "^2.9.9"
+pydantic-settings = "^2.2.1"
+fastapi-mail = "^1.4.1"
 
 
 [tool.poetry.group.dev.dependencies]
