@@ -31,7 +31,7 @@ def get_field_names(model: "BaseModel") -> List[str]:
 ContactFields: TypeAlias = Literal[*get_field_names(Contact)]
 
 
-@router.get("/", dependencies=[Depends(RateLimiter(times=2, seconds=60))])
+@router.get("/", dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def read(
         user: Annotated[User, Depends(auth_service.get_access_user)],
         db: Session = Depends(get_db)
@@ -41,7 +41,9 @@ async def read(
                .filter(ContactORM.owner == user.id).all()]
 
 
-@router.get("/{contact_id:int}", response_model=ContactResponse)
+@router.get("/{contact_id:int}",
+            response_model=ContactResponse,
+            dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def read_id(contact_id: int,
                   user: Annotated[User, Depends(auth_service.get_access_user)],
                   db: Session = Depends(get_db)
@@ -56,7 +58,9 @@ async def read_id(contact_id: int,
     return ContactResponse.from_orm(res)
 
 
-@router.post("/", response_model=ContactResponse)
+@router.post("/",
+             response_model=ContactResponse,
+             dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def create(
         contact: Contact,
         user: Annotated[User, Depends(auth_service.get_access_user)],
@@ -93,7 +97,9 @@ async def create(
     return ContactResponse.from_orm(res)
 
 
-@router.get("/find", response_model=List[ContactResponse])
+@router.get("/find",
+            response_model=List[ContactResponse],
+            dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def find_contact(
         value: str,
         db: Annotated[Session, Depends(get_db)],
@@ -132,7 +138,9 @@ async def find_contact(
                         content=f"Fullname search  for {first_name} {last_name}")
 
 
-@router.get("/bd_mates", response_model=List[ContactResponse])
+@router.get("/bd_mates",
+            response_model=List[ContactResponse],
+            dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def get_birthday_mates_default(
         db: Session = Depends(get_db)
 ) -> Any:
@@ -143,7 +151,9 @@ async def get_birthday_mates_default(
     )
 
 
-@router.get("/bd_mates/{days:int}", response_model=List[ContactResponse])
+@router.get("/bd_mates/{days:int}",
+            response_model=List[ContactResponse],
+            dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def get_birthday_mates(
         days: int,
         db: Annotated[Session, Depends(get_db)],
@@ -178,7 +188,8 @@ async def get_birthday_mates(
 
   
 @router.put("/{contact_id:int}/add/{field:str}/{value}",
-            response_model=ContactResponse)
+            response_model=ContactResponse,
+            dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def add_data(
         contact_id: int,
         field: ContactFields,
@@ -226,7 +237,8 @@ async def add_data(
 
 
 @router.patch("/{contact_id:int}/edit/{field:str}/{value:str}",
-            response_model=ContactResponse)
+              response_model=ContactResponse,
+              dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def edit_data(
         contact_id: int,
         field: ContactFields,
@@ -284,7 +296,8 @@ async def edit_data(
 
 
 @router.delete('/delete/{contact_id:int}',
-               responses={204: {"model": None}})
+               responses={204: {"model": None}},
+               dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def delete(
         contact_id: int,
         db: Annotated[Session, Depends(get_db)],
@@ -309,7 +322,8 @@ async def delete(
 
 
 @router.delete('/{contact_id:int}/delete/{field:str}',
-               responses={204: {"model": None}})
+               responses={204: {"model": None}},
+               dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def delete_data(
         contact_id: int,
         field: ContactFields,

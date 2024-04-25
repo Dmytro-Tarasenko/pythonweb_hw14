@@ -1,6 +1,7 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 from starlette import status
@@ -21,7 +22,8 @@ auth_service = Authentication()
 @router.post("/register",
              response_model=UserDB,
              responses={409: {"description": "User already exists"},
-                        201: {"model": UserDB}})
+                        201: {"model": UserDB}},
+             dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def new_user(
         user: UserRequest,
         db: Annotated[Session, Depends(get_db)],
@@ -59,7 +61,9 @@ async def new_user(
     )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login",
+             response_model=TokenResponse,
+             dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def login(
         user: UserRequest,
         db: Annotated[Session, Depends(get_db)]
@@ -105,7 +109,9 @@ async def login(
     )
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post("/refresh",
+             response_model=TokenResponse,
+             dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def refresh(
         request: Request,
         user: Annotated[User, Depends(auth_service.get_refresh_user)]
@@ -131,7 +137,8 @@ async def refresh(
     )
 
 
-@router.post("/logout")
+@router.post("/logout",
+             dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def logout(
         user: Annotated[User, Depends(auth_service.get_access_user)],
         db: Annotated[Session, Depends(get_db)]

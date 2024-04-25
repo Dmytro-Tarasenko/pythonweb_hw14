@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from fastapi import BackgroundTasks, Depends
 from fastapi.routing import APIRouter
+from fastapi_limiter.depends import RateLimiter
 from pydantic import EmailStr, BaseModel
 from fastapi_mail import (ConnectionConfig,
                           MessageSchema,
@@ -43,7 +44,8 @@ conf = ConnectionConfig(
 )
 
 
-@router.post('/send-confirmation')
+@router.post('/send-confirmation',
+             dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def send_confirmation(
         bg_task: BackgroundTasks,
         email: EmailModel,
@@ -76,7 +78,8 @@ async def send_confirmation(
     return {"message": f"email has been sent to {email.email}"}
 
 
-@router.get('/confirm/{token:str}')
+@router.get('/confirm/{token:str}',
+            dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def confirm_email(
         db: Annotated[Session, Depends(get_db)],
         token: str
