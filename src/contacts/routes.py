@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from typing import Any, TypeAlias, Literal, List, Annotated
 
 from fastapi import APIRouter, Depends, status
+from fastapi_limiter.depends import RateLimiter
 from sqlalchemy import column
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -30,7 +31,7 @@ def get_field_names(model: "BaseModel") -> List[str]:
 ContactFields: TypeAlias = Literal[*get_field_names(Contact)]
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(RateLimiter(times=2, seconds=60))])
 async def read(
         user: Annotated[User, Depends(auth_service.get_access_user)],
         db: Session = Depends(get_db)

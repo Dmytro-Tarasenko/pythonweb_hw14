@@ -1,15 +1,11 @@
-from pydantic import BaseModel
-from pydantic_settings import BaseSettings
-from pydantic_settings import SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class EnvSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env',
                                       env_file_encoding='utf-8',
-                                      extra='allow')
+                                      extra='ignore')
 
-
-class AppSettings(BaseModel):
     sqlalchemy_url: str
     secret_256: str
     secret_512: str
@@ -22,8 +18,11 @@ class AppSettings(BaseModel):
     mail_from: str
     redis_server: str
     redis_port: int
+    redis_pass: str
     cloudinary_url: str
 
 
-__env_settings = EnvSettings()
-settings = AppSettings(**__env_settings.model_dump(warnings=False))
+# production environment
+settings = EnvSettings()
+# development environmetn
+# settings = EnvSettings(_env_file='dev.env')
