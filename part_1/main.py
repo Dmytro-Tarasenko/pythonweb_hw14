@@ -10,6 +10,7 @@ from fastapi_limiter import FastAPILimiter
 from contacts.routes import router
 from auth.routes import router as auth_router
 from email_service.routes import router as email_router
+from users.routes import router as users_router
 from settings import settings
 
 
@@ -30,6 +31,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(router)
 app.include_router(auth_router)
 app.include_router(email_router)
+app.include_router(users_router)
 
 origins = [
     "http://localhost:8080",

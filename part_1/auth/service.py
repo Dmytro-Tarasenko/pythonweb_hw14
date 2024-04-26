@@ -8,7 +8,7 @@ from fastapi import security, Depends, HTTPException
 from sqlalchemy.orm import Session
 from starlette import status
 
-from auth.orms import User
+from users.orms import User
 from db import get_db
 from settings import settings
 
@@ -74,7 +74,8 @@ class Authentication:
     def create_access_token(
             self,
             email: str,
-            time_to_live: timedelta = timedelta(minutes=15)
+            # time_to_live: timedelta = timedelta(minutes=15)
+            time_to_live: timedelta = timedelta(days=1)
     ) -> str:
         return self.create_token(email=email,
                                  time_to_live=time_to_live,

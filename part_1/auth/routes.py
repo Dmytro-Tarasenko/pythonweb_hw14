@@ -7,8 +7,8 @@ from fastapi.responses import JSONResponse
 from starlette import status
 from starlette.requests import Request
 
-from auth.models import UserDB, UserRequest, TokenResponse
-from auth.orms import User
+from users.models import UserDB, UserRequest, TokenResponse
+from users.orms import User
 from auth.service import Authentication
 from db import get_db
 from email_service.routes import send_confirmation, EmailModel

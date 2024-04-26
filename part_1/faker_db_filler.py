@@ -4,7 +4,7 @@ import sqlalchemy
 from faker import Faker
 from db import DBSession
 
-from auth.orms import User
+from users.orms import User
 from auth.service import Authentication
 from contacts.orms import ContactORM
 

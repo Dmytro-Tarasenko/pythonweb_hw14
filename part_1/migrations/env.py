@@ -18,8 +18,6 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from contacts.orms import ContactORM
-from auth.orms import User
 
 from db import Base
 target_metadata = Base.metadata

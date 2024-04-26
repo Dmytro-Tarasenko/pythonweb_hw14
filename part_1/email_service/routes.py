@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import JSONResponse
 
-from auth.orms import User
+from users.orms import User
 from settings import settings
 from auth.service import Authentication
 from db import get_db

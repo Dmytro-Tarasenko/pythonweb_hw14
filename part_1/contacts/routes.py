@@ -13,7 +13,7 @@ from starlette.responses import Response
 from db import get_db
 from contacts.orms import ContactORM
 from contacts.models import Contact, ContactResponse
-from auth.orms import User
+from users.orms import User
 from auth.service import Authentication
 
 router = APIRouter(prefix='/contacts',
