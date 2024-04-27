@@ -1,0 +1,36 @@
+{% extends 'app_quotes/base.html' %}
+
+{% block content %}
+<p class="text-xl text-center text-gray-700">Quotes for tag: <span class="font-medium">{{ tag_name }}</span></p>
+    {% for quote in quotes %}
+    <div class="container w-5/6 mx-auto mb-5 border-2 border-zinc-200 rounded-md p-4 shadow-md bg-[#faeed770]">
+        <p class="text-lg font-medium pb-3 text-gray-700">{{ quote.quote }}</p>
+        <p>by <span class="font-medium text-[#3677E8]">{{ quote.author.fullname }}</span>
+        <a  class="text-indigo-600 transition ease-in-out delay-100 hover:text-indigo-800 duration-150"
+            href="{% url 'app_quotes:author' name=quote.href_name %}">(about)</a>
+        </p>
+        <div class="tags my-1 p-1">
+            Tags:
+            {% for tag in quote.tagslist %}
+                {% if tag.tag != '' %}
+                    {% if tag.tag != tag_name %}
+                        <a class="py-1 px-3 bg-sky-500 rounded-md text-gray-200 transition ease-in-out delay-50 hover:text-gray-100 hover:bg-sky-600"
+                        href="{% url 'app_quotes:quotes' tag=tag.tag %}">{{ tag.tag }}</a>
+                    {% else %}
+                        <a class="py-1 px-3 bg-green-500 rounded-md text-gray-200 transition ease-in-out delay-50 hover:text-gray-100 hover:bg-green-600"
+                        href="{% url 'app_quotes:quotes' tag=tag.tag %}">{{ tag.tag }}</a>
+                    {% endif %}
+                {% else %}
+                    <span> no tags </span>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    {% if user.is_authenticated %}
+    <div class="fab bg-blue-400 rounded-full transition ease-in-out delay-100 hover:scale-110 hover:bg-blue-700 duration-150"
+         style="position: fixed; bottom: 10%; right: 5%; padding: 1.5rem; font-size: 2rem; line-height: 1.5rem;">
+        <a class="text-zinc-200" href="{% url 'app_quotes:addquote' %}">+</a>
+    </div>
+    {% endif %}
+{% endblock %}
