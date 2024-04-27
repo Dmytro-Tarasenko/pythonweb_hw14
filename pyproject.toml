@@ -2,6 +2,7 @@
 name = "pythonweb-hw12"
 version = "0.1.0"
 description = ""
+package-mode = false
 authors = ["Dmytro-Tarasenko <ug.dotenko@gmail.com>"]
 readme = "README.md"
 
