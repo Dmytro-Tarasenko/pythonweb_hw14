@@ -9,6 +9,9 @@ from pydantic import (BaseModel,
 
 
 class Contact(BaseModel):
+    """
+    Base data structure for contact information
+    """
     first_name: str
     last_name: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -27,6 +30,7 @@ class Contact(BaseModel):
 
 
 class ContactResponse(Contact):
+    """Data structure that carries contact response information"""
     model_config = ConfigDict(from_attributes=True)
 
     id: int

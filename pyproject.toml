@@ -22,7 +22,7 @@ fastapi-mail = "^1.4.1"
 fastapi-limiter = "^0.1.6"
 cloudinary = "^1.40.0"
 python-multipart = "^0.0.9"
-django = "^5.0.4"
+sphinx = "^7.3.7"
 
 
 [tool.poetry.group.dev.dependencies]

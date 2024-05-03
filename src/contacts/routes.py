@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
-from db import get_db
+import db
 from contacts.orms import ContactORM
 from contacts.models import Contact, ContactResponse
 from users.orms import User
@@ -20,6 +20,7 @@ router = APIRouter(prefix='/contacts',
                    tags=['contacts'])
 
 auth_service = Authentication()
+
 
 def get_field_names(model: "BaseModel") -> List[str]:
     """Return a list of field names for the model."""
@@ -34,9 +35,17 @@ ContactFields: TypeAlias = Literal[*get_field_names(Contact)]
 @router.get("/", dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def read(
         user: Annotated[User, Depends(auth_service.get_access_user)],
-        db: Session = Depends(get_db)
+        db: Session = Depends(db.get_db)
 ) -> list[ContactResponse]:
-    """Return all contacts from the database."""
+    """
+    Return all contacts from the database.
+    Args:
+        user (User): user retrieved from 'users' with valid credentials
+        db (Session): session object used for database operations
+
+    Returns:
+        list of contacts (ContactResponse) or empty list
+    """
     return [ContactResponse.from_orm(_) for _ in db.query(ContactORM)\
                .filter(ContactORM.owner == user.id).all()]
 
@@ -46,9 +55,20 @@ async def read(
             dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def read_id(contact_id: int,
                   user: Annotated[User, Depends(auth_service.get_access_user)],
-                  db: Session = Depends(get_db)
+                  db: Session = Depends(db.get_db)
                   ) -> Any:
-    """Return a contact by id."""
+    """
+    Retrieves a contact by id.
+    Args:
+        contact_id (int): identifier of contact in database
+        user (User): user retrieved from 'users' with valid credentials,
+            also serves as an access filter to user-owned contacts only
+        db (Session): session object used for database operations
+
+    Returns:
+        ContactResponse model or JSONResponse with status 404 if contact with
+        specified id not found in user-owned contacts
+    """
     res = db.query(ContactORM.id == contact_id,
                    ContactORM.owner == user.id).first()
 
@@ -64,9 +84,20 @@ async def read_id(contact_id: int,
 async def create(
         contact: Contact,
         user: Annotated[User, Depends(auth_service.get_access_user)],
-        db: Session = Depends(get_db)
+        db: Session = Depends(db.get_db)
 ) -> Any:
-    """Create a new contact."""
+    """
+    Create a new contact.
+    Args:
+        contact (Contact): model with new contact information
+        user (User): user retrieved from 'users' with valid credentials,
+            also serves as an access filter to user-owned contacts only
+        db (Session): session object used for database operations
+
+    Returns:
+        ContactResponse model or JSONResponse with statuses 409 (for contact with
+        duplicate unique fields) or 422 (for unprocessable data)
+    """
     db.add(ContactORM(**contact.model_dump(exclude={'full_name'}), owner=user.id))
     try:
         db.commit()
@@ -102,11 +133,23 @@ async def create(
             dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def find_contact(
         value: str,
-        db: Annotated[Session, Depends(get_db)],
+        db: Annotated[Session, Depends(db.get_db)],
         user: Annotated[User, Depends(auth_service.get_access_user)],
         field: ContactFields = "full_name"
 ) -> Any:
-    print(field, value)
+    """
+       Create a new contact.
+       Args:
+           field (ContactFields): field to search in contacts
+           value (str): value to search in field
+           user (User): user retrieved from 'users' with valid credentials,
+               also serves as an access filter to user-owned contacts only
+           db (Session): session object used for database operations
+
+       Returns:
+           list of contacts (ContactResponse) or JSONResponse with status code 404
+           if there are no result for specified search condictions
+    """
     if field != "full_name":
         if len(value) == 0:
             res = db.query(ContactORM)\
@@ -129,22 +172,35 @@ async def find_contact(
                                 })
         return [ContactResponse.from_orm(_) for _ in res]
 
-    try:
-        first_name, last_name = value.split(" ", maxsplit=1)
-    except:
-        first_name = value
-        last_name = None
-    return JSONResponse(status_code=200,
-                        content=f"Fullname search  for {first_name} {last_name}")
+    res = db.query(ContactORM)\
+            .filter(ContactORM.full_name == value)
+    if len(res) == 0:
+        return JSONResponse(status_code=404,
+                            content={
+                                "details": [
+                                    {
+                                        "msg": f"There is no result for {field}={value}"
+                                    }
+                                ]
+                            })
+    return [ContactResponse.from_orm(_) for _ in res]
 
 
 @router.get("/bd_mates",
             response_model=List[ContactResponse],
             dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def get_birthday_mates_default(
-        db: Session = Depends(get_db)
+        db: Session = Depends(db.get_db)
 ) -> Any:
-    """Return contacts with birthday in the next 7 days."""
+    """
+    Return contacts with birthday in the next 7 days.
+    Args:
+        db (Session): session object used for database operations
+
+   Returns:
+       list of contacts (ContactResponse) or JSONResponse with 404 status code
+        if there are no birthday mates in a week
+    """
     return await get_birthday_mates(
         days=7,
         db=db
@@ -156,12 +212,21 @@ async def get_birthday_mates_default(
             dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def get_birthday_mates(
         days: int,
-        db: Annotated[Session, Depends(get_db)],
+        db: Annotated[Session, Depends(db.get_db)],
         user: Annotated[User, Depends(auth_service.get_access_user)]
 ) -> Any:
-    """Return contacts with birthday in the next {days} days.
-        :param days: int, number of days to search for birthday mates
-        :return: list of ContactResponse objects
+    """
+    Return contacts with birthday in the next {days} days.
+
+    Args:
+        days (int): number of days to search for birthday mates
+        db (Session): session object used for database operations
+        user (User): user retrieved from 'users' with valid credentials,
+               also serves as an access filter to user-owned contacts only
+
+    Returns:
+        list of ContactResponse objects or JSONResponse with 404 status code
+        if there are no birthday mates in specified number of days
     """
     res = []
     request_md = []
@@ -194,10 +259,25 @@ async def add_data(
         contact_id: int,
         field: ContactFields,
         value: str,
-        db: Annotated[Session, Depends(get_db)],
+        db: Annotated[Session, Depends(db.get_db)],
         user: Annotated[User, Depends(auth_service.get_access_user)]
 ) -> Any:
-    """Add data to the contact."""
+    """
+    Add data to the contact.
+    Args:
+        contact_id (int): identifier of contact in database
+       field (ContactFields): field to search in contacts
+       value (str): value to search in field
+       user (User): user retrieved from 'users' with valid credentials,
+           also serves as an access filter to user-owned contacts only
+       db (Session): session object used for database operations
+
+   Returns:
+       JSONResponse`s with status codes:
+       201 - on success
+       404 - if user-owned contact with specified id is not found
+       422 - for unprocessable data
+    """
     contact = db.query(ContactORM.id == contact_id,
                        ContactORM.owner == user.id).first()
 
@@ -243,10 +323,25 @@ async def edit_data(
         contact_id: int,
         field: ContactFields,
         value: str,
-        db: Annotated[Session, Depends(get_db)],
+        db: Annotated[Session, Depends(db.get_db)],
         user: Annotated[User, Depends(auth_service.get_access_user)]
 ) -> Any:
-    """Edit data of the contact."""
+    """
+    Edit data of the contact.
+    Args:
+        contact_id (int): identifier of contact in database
+        field (ContactFields): field to search in contacts
+        value (str): value to search in field
+        user (User): user retrieved from 'users' with valid credentials,
+           also serves as an access filter to user-owned contacts only
+        db (Session): session object used for database operations
+
+   Returns:
+       JSONResponse`s with status codes:
+       201 - on success
+       404 - if user-owned contact with specified id is not found
+       422 - for unprocessable data
+    """
     contact = db.query(ContactORM.id == contact_id,
                        ContactORM.owner == user.id).first()
 
@@ -300,10 +395,22 @@ async def edit_data(
                dependencies=[Depends(RateLimiter(times=2, seconds=10))])
 async def delete(
         contact_id: int,
-        db: Annotated[Session, Depends(get_db)],
+        db: Annotated[Session, Depends(db.get_db)],
         user: Annotated[User, Depends(auth_service.get_access_user)]
 ) -> Any:
-    """Delete a contact by id."""
+    """
+    Delete a contact by id.
+    Args:
+        contact_id (int): identifier of contact in database
+        user (User): user retrieved from 'users' with valid credentials,
+           also serves as an access filter to user-owned contacts only
+        db (Session): session object used for database operations
+
+   Returns:
+       JSONResponse`s with status codes:
+       204 - on success
+       404 - if user-owned contact with specified id is not found
+    """
     contact = db.query(ContactORM.id == contact_id,
                        ContactORM.owner == user.id).first()
     if contact is None:
@@ -327,10 +434,24 @@ async def delete(
 async def delete_data(
         contact_id: int,
         field: ContactFields,
-        db: Annotated[Session, Depends(get_db)],
+        db: Annotated[Session, Depends(db.get_db)],
         user: Annotated[User, Depends(auth_service.get_access_user)]
 ) -> Any:
-    """Delete field for contact with id."""
+    """
+    Delete field for contact with id.
+        Args:
+        contact_id (int): identifier of contact in database
+        field (ContactFields): field to search in contacts
+        user (User): user retrieved from 'users' with valid credentials,
+           also serves as an access filter to user-owned contacts only
+        db (Session): session object used for database operations
+
+   Returns:
+       JSONResponse`s with status codes:
+       204 - on success
+       404 - if user-owned contact with specified id is not found
+       422 - for unprocessable data
+    """
     contact = db.query(ContactORM.id == contact_id,
                        ContactORM.owner == user.id).first()
     if contact is None:
