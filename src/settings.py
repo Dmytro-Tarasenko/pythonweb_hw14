@@ -1,8 +1,15 @@
+import os
+import sys
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+dot_env_path = Path(__file__).parent / 'dev.env'
+# dot_env_path = Path(__file__).parent / '.env'
 
 
 class EnvSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file='.env',
+    model_config = SettingsConfigDict(env_file=dot_env_path,
                                       env_file_encoding='utf-8',
                                       extra='ignore')
 
@@ -24,5 +31,6 @@ class EnvSettings(BaseSettings):
 
 # production environment
 settings = EnvSettings()
+print(settings)
 # development environmetn
 # settings = EnvSettings(_env_file='dev.env')
