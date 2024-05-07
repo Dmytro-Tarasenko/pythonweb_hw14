@@ -77,7 +77,8 @@ class Authentication:
             # time_to_live: timedelta = timedelta(minutes=15)
             time_to_live: timedelta = timedelta(days=1)
     ) -> str:
-        return self.create_token(email=email,
+        return self.create_token(self,
+                                 email=email,
                                  time_to_live=time_to_live,
                                  scope="access_token")
 
@@ -86,7 +87,8 @@ class Authentication:
             email: str,
             time_to_live: timedelta = timedelta(days=7)
     ) -> str:
-        return self.create_token(email=email,
+        return self.create_token(self,
+                                 email=email,
                                  scope="refresh_token",
                                  time_to_live=time_to_live)
 

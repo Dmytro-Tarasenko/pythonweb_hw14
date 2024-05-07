@@ -30,22 +30,14 @@ class TestAuthentication(unittest.TestCase):
 
     def test_create_refresh_token_success(self):
         current_time = datetime.now(timezone.utc)
-        expiration = current_time + timedelta(minutes=15)
+        expiration = current_time + timedelta(days=7)
         token = auth_service.create_refresh_token(
             auth_service,
             email="some@email.com",
         )
-        check_payload = jwt.decode(
-            token=jwt.encode(
-                claims={'sub': 'some@email.com',
-                        'exp': expiration,
-                        'scope': 'refresh_token'},
-                key=auth_service.SECRET_512,
-                algorithm=auth_service.REFRESH_ALGORITHM
-            ),
-            key=auth_service.SECRET_512,
-            algorithms=[auth_service.REFRESH_ALGORITHM]
-        )
+        check_payload = {'sub': 'some@email.com',
+                         'exp': int(expiration.timestamp()),
+                         'scope': 'refresh_token'}
         payload = jwt.decode(token=token,
                              key=auth_service.SECRET_512,
                              algorithms=[auth_service.REFRESH_ALGORITHM],
