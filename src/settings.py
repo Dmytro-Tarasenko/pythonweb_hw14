@@ -31,6 +31,5 @@ class EnvSettings(BaseSettings):
 
 # production environment
 settings = EnvSettings()
-print(settings)
 # development environmetn
 # settings = EnvSettings(_env_file='dev.env')
