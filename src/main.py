@@ -48,6 +48,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+print(app.dependency_overrides)
+
 if __name__ == "__main__":
     uvicorn.run(app="main:app",
                 host="localhost",

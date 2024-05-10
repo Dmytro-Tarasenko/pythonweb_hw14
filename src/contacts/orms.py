@@ -4,7 +4,7 @@ from typing import Optional, Any
 from sqlalchemy import String, Date, Text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db import Base, DBSession
+from db import Base, get_db
 
 
 def full_name_calculated_default(context) -> str:
@@ -20,7 +20,7 @@ def full_name_calculated_update(context) -> Any:
     id_ = context.get_current_parameters().get('id_1')
     if id_ is None:
         return
-    with DBSession() as session:
+    with get_db() as session:
         current = session.get(ContactORM, id_)
         first = first if first is not None else current.first_name
         last = last if last is not None else current.last_name

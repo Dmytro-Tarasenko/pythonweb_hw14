@@ -47,7 +47,7 @@ async def read(
         list of contacts (ContactResponse) or empty list
     """
     return [ContactResponse.from_orm(_) for _ in db.query(ContactORM)\
-               .filter(ContactORM.owner == user.id).all()]
+            .filter(ContactORM.owner == user.id).all()]
 
 
 @router.get("/{contact_id:int}",
@@ -98,6 +98,7 @@ async def create(
         ContactResponse model or JSONResponse with statuses 409 (for contact with
         duplicate unique fields) or 422 (for unprocessable data)
     """
+    print(db)
     db.add(ContactORM(**contact.model_dump(exclude={'full_name'}), owner=user.id))
     try:
         db.commit()
@@ -264,6 +265,7 @@ async def add_data(
 ) -> Any:
     """
     Add data to the contact.
+
     Args:
         contact_id (int): identifier of contact in database
        field (ContactFields): field to search in contacts
@@ -328,6 +330,7 @@ async def edit_data(
 ) -> Any:
     """
     Edit data of the contact.
+
     Args:
         contact_id (int): identifier of contact in database
         field (ContactFields): field to search in contacts
@@ -400,6 +403,7 @@ async def delete(
 ) -> Any:
     """
     Delete a contact by id.
+
     Args:
         contact_id (int): identifier of contact in database
         user (User): user retrieved from 'users' with valid credentials,
@@ -439,7 +443,8 @@ async def delete_data(
 ) -> Any:
     """
     Delete field for contact with id.
-        Args:
+
+    Args:
         contact_id (int): identifier of contact in database
         field (ContactFields): field to search in contacts
         user (User): user retrieved from 'users' with valid credentials,

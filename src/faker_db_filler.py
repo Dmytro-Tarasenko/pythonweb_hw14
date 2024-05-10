@@ -2,7 +2,7 @@ from random import randint
 
 import sqlalchemy
 from faker import Faker
-from db import DBSession
+from db import get_db
 
 from users.orms import User
 from auth.service import Authentication
@@ -17,7 +17,7 @@ for _ in range(5):
     password = auth.hash_password(plain_password="password")
     user = User(email=email,
                 hashed_pwd=password)
-    with DBSession() as session:
+    with get_db() as session:
         session.add(user)
         session.commit()
 
@@ -60,7 +60,7 @@ for _ in range(111):
                          extra=extra,
                          owner=owner)
 
-    with DBSession() as session:
+    with get_db() as session:
         try:
             session.add(contact)
             session.commit()

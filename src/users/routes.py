@@ -1,6 +1,6 @@
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, UploadFile
 from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.orm import Session
 import cloudinary
@@ -20,6 +20,7 @@ auth_service = Authentication()
 
 router = APIRouter(prefix="/users",
                    tags=["users", "profile"])
+
 
 @router.get("/profile/",
             dependencies=[Depends(RateLimiter(times=2, seconds=40))],
@@ -63,6 +64,7 @@ async def update_avatar(
             "details": f"{avatar_url}"
         }
     )
+
 
 @router.delete("/avatar",
                dependencies=[Depends(RateLimiter(times=1, minutes=2))],

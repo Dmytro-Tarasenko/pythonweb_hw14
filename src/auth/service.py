@@ -74,8 +74,8 @@ class Authentication:
     def create_access_token(
             self,
             email: str,
-            # time_to_live: timedelta = timedelta(minutes=15)
-            time_to_live: timedelta = timedelta(days=1)
+            time_to_live: timedelta = timedelta(minutes=15)
+            # time_to_live: timedelta = timedelta(days=1)
     ) -> str:
         return self.create_token(self,
                                  email=email,
