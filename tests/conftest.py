@@ -18,17 +18,17 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL,
                        connect_args={"check_same_thread": False},
                        poolclass=StaticPool)
 
-TestSession = sessionmaker(autocommit=False,
-                           autoflush=False,
-                           bind=engine)
+TestingSession = sessionmaker(autocommit=False,
+                              autoflush=False,
+                              bind=engine)
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module', autouse=True)
 def session():
     database.Base.metadata.drop_all(bind=engine)
     database.Base.metadata.create_all(bind=engine)
     print(database.Base.metadata.tables)
-    db = TestSession()
+    db = TestingSession()
     try:
         yield db
     finally:
