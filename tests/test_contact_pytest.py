@@ -1,4 +1,7 @@
 from unittest.mock import AsyncMock
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def test_create_contact(client,
@@ -18,10 +21,11 @@ def test_create_contact(client,
     monkeypatch.setattr("fastapi_limiter.FastAPILimiter.http_callback",
                         AsyncMock())
     headers = {'Authorization': f'Bearer {get_access_token}'}
+    logger.debug(f"client.app.dependency_overrides: {client.app.dependency_overrides}")
     response = client.post(
         headers=headers,
-        url="/contacts",
+        url="/contacts/",
         json=contact
     )
-    print(response.text)
+    logger.info(f"response: {response.status_code}, {response.text}")
     assert response.status_code > 0, response.text

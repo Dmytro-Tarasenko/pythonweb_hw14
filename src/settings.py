@@ -1,11 +1,9 @@
-import os
-import sys
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-dot_env_path = Path(__file__).parent / 'dev.env'
-# dot_env_path = Path(__file__).parent / '.env'
+# dot_env_path = Path(__file__).parent / 'dev.env'
+dot_env_path = Path(__file__).parent / '.env'
 
 
 class EnvSettings(BaseSettings):

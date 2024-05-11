@@ -98,7 +98,6 @@ async def create(
         ContactResponse model or JSONResponse with statuses 409 (for contact with
         duplicate unique fields) or 422 (for unprocessable data)
     """
-    print(db)
     db.add(ContactORM(**contact.model_dump(exclude={'full_name'}), owner=user.id))
     try:
         db.commit()

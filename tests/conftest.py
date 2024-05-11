@@ -7,8 +7,12 @@ from sqlalchemy import create_engine, StaticPool
 from sqlalchemy.orm import sessionmaker
 
 from src.main import app
-import src.db as database
+
+from src.db import Base, get_db
 from src.auth.service import Authentication as auth_service
+import logging
+
+logging.basicConfig(filename='debug.log', level=logging.DEBUG)
 
 
 # SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -23,11 +27,11 @@ TestingSession = sessionmaker(autocommit=False,
                               bind=engine)
 
 
-@pytest.fixture(scope='module', autouse=True)
+@pytest.fixture(scope='module')
 def session():
-    database.Base.metadata.drop_all(bind=engine)
-    database.Base.metadata.create_all(bind=engine)
-    print(database.Base.metadata.tables)
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    logging.info(f"Database tables: {Base.metadata.tables}")
     db = TestingSession()
     try:
         yield db
@@ -40,13 +44,16 @@ def client(session):
     # Dependency override
     def override_get_db():
         try:
+            logging.debug(f"session yield: {session}")
             yield session
+        except Exception as e:
+            logging.error(f"session error: {e}")
         finally:
             session.close()
 
-    app.dependency_overrides[database.get_db] = override_get_db
+    app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[RateLimiter] = AsyncMock()
-
+    logging.debug(f"app.dependency_overrides: {app.dependency_overrides}")
     yield TestClient(app)
 
 

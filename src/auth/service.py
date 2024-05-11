@@ -1,8 +1,8 @@
 from datetime import datetime, timezone, timedelta
 from typing import Any, TypeAlias, Literal, Annotated
 
-import jose
-from jose import jwt
+
+from jose import jwt, JWTError
 import bcrypt
 from fastapi import security, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -112,7 +112,7 @@ class Authentication:
                                  key=key,
                                  algorithms=[algorithm],
                                  options={"verify_exp": False})
-        except jose.JWTError as e:
+        except JWTError as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Invalid token: {e}"
