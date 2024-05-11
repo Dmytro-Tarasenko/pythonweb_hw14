@@ -34,8 +34,10 @@ def session():
     logging.info(f"Database tables: {Base.metadata.tables}")
     db = TestingSession()
     try:
+        logging.debug(f"session yield: {db}")
         yield db
     finally:
+        logging.debug(f"session close: {db}")
         db.close()
 
 
@@ -49,6 +51,7 @@ def client(session):
         except Exception as e:
             logging.error(f"session error: {e}")
         finally:
+            logging.debug(f"session close: {session}")
             session.close()
 
     app.dependency_overrides[get_db] = override_get_db
